@@ -225,7 +225,7 @@ void ContFramePool::mark_inaccessible(unsigned long _base_frame_no,
 ContFramePool* ContFramePool::find_pool_by_frame(unsigned long frame_no) 
 {
     ContFramePool* current = head;
-    while(current != NULL)
+    while(current != nullptr)
     {
         if((frame_no >= current->base_frame_no) && (frame_no < (current->base_frame_no + current->n_frames)))
             return current;
