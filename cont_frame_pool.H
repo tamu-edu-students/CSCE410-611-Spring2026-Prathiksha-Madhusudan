@@ -20,7 +20,7 @@
 /* DEFINES */
 /*--------------------------------------------------------------------------*/
 
-/* -- (none) -- */
+#define DEBUG	0
 
 /*--------------------------------------------------------------------------*/
 /* INCLUDES */
@@ -41,10 +41,14 @@
 class ContFramePool {
     
 private:
-    /* -- DEFINE YOUR CONT FRAME POOL DATA STRUCTURE(s) HERE. */
-    
-    
-    
+	
+	unsigned char * bitmap;			// Bitmap for Cont Frame Pool
+	unsigned int    nFreeFrames;	// Number of free frames
+	unsigned long   base_frame_no;	// Frame number at start of physical memory region
+	unsigned long   nframes;		// Number of frames in frame pool
+	unsigned long   info_frame_no;	// Frame number at start of management info in physical memory
+	ContFramePool * next;			// Frame Pool Linked List next pointer
+	
     /* ---- STATE MANAGEMENT */
     
     enum class FrameState {Free, Used, HoS};
@@ -52,13 +56,14 @@ private:
     FrameState get_state(unsigned long _frame_no);
     void set_state(unsigned long _frame_no, FrameState _state);
     
-    
 public:
-
-    // The frame size is the same as the page size, duh...    
+	
+	static ContFramePool * head;	// Frame Pool Linked List head pointer
+	
+	// The frame size is the same as the page size, duh...    
     static const unsigned int FRAME_SIZE = Machine::PAGE_SIZE; 
 
-    ContFramePool(unsigned long _base_frame_no,
+	ContFramePool(unsigned long _base_frame_no,
                   unsigned long _n_frames,
                   unsigned long _info_frame_no);
     /*
@@ -104,6 +109,8 @@ public:
      This function must first identify the correct frame pool and then call the frame
      pool's release_frame function.
      */
+	
+	void release_frames_in_pool(unsigned long _first_frame_no);
     
     static unsigned long needed_info_frames(unsigned long _n_frames);
     /*

@@ -12,7 +12,7 @@ GCC=x86_64-elf-gcc
 LD=x86_64-elf-ld
 endif
 
-GCC_OPTIONS = -m32 -nostdlib -fno-builtin -nostartfiles -nodefaultlibs -fno-exceptions -fno-rtti -fno-stack-protector -fleading-underscore -fno-asynchronous-unwind-tables -fno-pie
+GCC_OPTIONS = -m32 -std=gnu++11 -nostdlib -fno-builtin -nostartfiles -nodefaultlibs -fno-exceptions -fno-rtti -fno-stack-protector -fleading-underscore -fno-asynchronous-unwind-tables -fno-pie
 
 all: kernel.bin
 
