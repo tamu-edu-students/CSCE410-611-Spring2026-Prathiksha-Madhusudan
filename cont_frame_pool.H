@@ -1,10 +1,7 @@
 /*
  File: cont_frame_pool.H
  
- Author: R. Bettati
- Department of Computer Science
- Texas A&M University
- Date  : 17/02/04 
+ Author: Prathiksha madhusudan
  
  Description: Management of the CONTIGUOUS Free-Frame Pool.
  
@@ -20,7 +17,8 @@
 /* DEFINES */
 /*--------------------------------------------------------------------------*/
 
-#define DEBUG	0
+#define BITS_PER_FRAME 2
+#define MAX_FRAMES 8192
 
 /*--------------------------------------------------------------------------*/
 /* INCLUDES */
@@ -39,31 +37,31 @@
 /*--------------------------------------------------------------------------*/
 
 class ContFramePool {
-    
-private:
-	
-	unsigned char * bitmap;			// Bitmap for Cont Frame Pool
-	unsigned int    nFreeFrames;	// Number of free frames
-	unsigned long   base_frame_no;	// Frame number at start of physical memory region
-	unsigned long   nframes;		// Number of frames in frame pool
-	unsigned long   info_frame_no;	// Frame number at start of management info in physical memory
-	ContFramePool * next;			// Frame Pool Linked List next pointer
-	
-    /* ---- STATE MANAGEMENT */
-    
-    enum class FrameState {Free, Used, HoS};
 
-    FrameState get_state(unsigned long _frame_no);
+private:
+    /* -- DEFINE YOUR CONT FRAME POOL DATA STRUCTURE(s) HERE. */
+    unsigned long base_frame_no;
+    unsigned long n_frames;
+    unsigned long info_frame_no;
+    unsigned char bitmap[MAX_FRAMES * BITS_PER_FRAME / 8]; // Bitmap array for this pool
+
+    ContFramePool* next; // Pointer to the next pool in the list
+    ContFramePool* prev; // Pointer to the previous pool in the list
+
+    /* ---- STATE MANAGEMENT */
+    enum class FrameState { Free , Used , HoS }; // Enum for frame states
+    unsigned int get_state(unsigned long _frame_no) const ;
     void set_state(unsigned long _frame_no, FrameState _state);
     
 public:
-	
-	static ContFramePool * head;	// Frame Pool Linked List head pointer
-	
-	// The frame size is the same as the page size, duh...    
+
+    //Head of this pool
+    static ContFramePool* head;
+    
+    // The frame size is the same as the page size, duh...    
     static const unsigned int FRAME_SIZE = Machine::PAGE_SIZE; 
 
-	ContFramePool(unsigned long _base_frame_no,
+    ContFramePool(unsigned long _base_frame_no,
                   unsigned long _n_frames,
                   unsigned long _info_frame_no);
     /*
@@ -109,8 +107,6 @@ public:
      This function must first identify the correct frame pool and then call the frame
      pool's release_frame function.
      */
-	
-	void release_frames_in_pool(unsigned long _first_frame_no);
     
     static unsigned long needed_info_frames(unsigned long _n_frames);
     /*
@@ -125,5 +121,8 @@ public:
      Other implementations need a different number of info frames.
      The exact number is computed in this function..
      */
+
+     static ContFramePool* find_pool_by_frame(unsigned long frame_no);
+     /* Returns the frame pool which is available based on the frame no requested */
 };
 #endif
