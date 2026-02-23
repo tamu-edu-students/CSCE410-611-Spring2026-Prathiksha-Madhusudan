@@ -189,7 +189,7 @@ ContFramePool::ContFramePool(unsigned long _base_frame_no,
     assert(num_pools < MAX_POOLS);
     pool_list[num_pools++] = this;
 
-    Console::puts("ContframePool::Constructor not implemented!\n");
+    Console::puts("ContframePool::Constructor implemented!\n");
 }
 
 unsigned long ContFramePool::get_frames(unsigned int _n_frames)
@@ -215,7 +215,7 @@ unsigned long ContFramePool::get_frames(unsigned int _n_frames)
         }
     }
 
-    Console::puts("ContframePool::get_frames not implemented!\n");
+    Console::puts("ContframePool::get_frames implemented!\n");
     return 0; // keep compiler happy
 }
 
@@ -226,7 +226,7 @@ void ContFramePool::mark_inaccessible(unsigned long _base_frame_no,
     for (unsigned long i = _base_frame_no + 1; i < _base_frame_no + _n_frames; i++) {
         set_state(i, FrameState::Used);
     }
-    Console::puts("ContframePool::mark_inaccessible not implemented!\n");
+    Console::puts("ContframePool::mark_inaccessible implemented!\n");
 }
 
 void ContFramePool::release_frames(unsigned long _first_frame_no)
@@ -254,13 +254,13 @@ void ContFramePool::release_frames(unsigned long _first_frame_no)
         pool->set_state(i, FrameState::Free);
         i++;
     }
-    Console::puts("ContframePool::release_frames not implemented!\n");
+    Console::puts("ContframePool::release_frames implemented!\n");
 }
 
 unsigned long ContFramePool::needed_info_frames(unsigned long _n_frames)
 {
     unsigned long frames_per_info_frame = FRAME_SIZE * 4;
-    Console::puts("ContframePool::need_info_frames not implemented!\n");
+    Console::puts("ContframePool::need_info_frames implemented!\n");
     return _n_frames / frames_per_info_frame +
            (_n_frames % frames_per_info_frame > 0 ? 1 : 0);
 }
