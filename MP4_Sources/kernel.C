@@ -89,7 +89,7 @@ void* operator new[](size_t size)
 }
 
 //replace the operator "delete"
-void operator delete (void* p, size_t size)
+void operator delete (void* p)
 {
 	current_pool->release((unsigned long)p);
 }
@@ -224,7 +224,7 @@ int main()
 
 	/* BY DEFAULT WE TEST THE PAGE TABLE IN MAPPED MEMORY!
 	   (UNCOMMENT THE FOLLOWING LINE TO TEST THE VM Pools! */
-#define _TEST_PAGE_TABLE_
+//#define _TEST_PAGE_TABLE_
 
 #ifdef _TEST_PAGE_TABLE_
 
