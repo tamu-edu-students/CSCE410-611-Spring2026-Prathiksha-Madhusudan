@@ -42,8 +42,18 @@ class ContFramePool {
     
 private:
     /* -- DEFINE YOUR CONT FRAME POOL DATA STRUCTURE(s) HERE. */
-    
-    
+
+    unsigned long base_frame_no;    /* number of the first frame in this pool */
+    unsigned long n_frames;         /* total number of frames in this pool */
+    unsigned long n_info_frames;    /* number of frames used to store the bitmap */
+    unsigned char * bitmap;         /* pointer to the bitmap stored in info frame(s) */
+
+    /* We keep a static list of all pools so that release_frames() (which is
+       static and therefore has no 'this' pointer) can search for the pool
+       that owns a given frame number. */
+    static const unsigned int MAX_POOLS = 8;
+    static ContFramePool * pool_list[MAX_POOLS];
+    static unsigned int num_pools;
     
     /* ---- STATE MANAGEMENT */
     
@@ -51,7 +61,6 @@ private:
 
     FrameState get_state(unsigned long _frame_no);
     void set_state(unsigned long _frame_no, FrameState _state);
-    
     
 public:
 
