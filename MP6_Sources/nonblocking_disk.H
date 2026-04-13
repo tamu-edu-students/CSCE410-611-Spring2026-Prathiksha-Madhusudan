@@ -23,40 +23,49 @@
 
 #include "simple_disk.H"
 #include "thread.H"
+#include "interrupts.H" /* need interrup handler base class for IRQ 14 */
 
 /*--------------------------------------------------------------------------*/
 /* DATA STRUCTURES */ 
 /*--------------------------------------------------------------------------*/
 
-/* -- (none) -- */
+/* One entry per blocked thread waiting for a disk operation to finish.
+   Forms a singly-linked FIFO queue (Option 2). */
+struct DiskRequest {
+    Thread*      thread;   /* Thread to wake when this request completes */
+    DiskRequest* next;     /* Next in queue; nullptr if last              */
+};
 
 /*--------------------------------------------------------------------------*/
 /* N o n B l o c k i n g D i s k  */
 /*--------------------------------------------------------------------------*/
 
-class NonBlockingDisk : public SimpleDisk {
+class NonBlockingDisk : public SimpleDisk, public InterruptHandler {
 private:
-    /* The thread that is currently blocked waiting for the disk.
-       Since we assume single-threaded disk access (base requirement),
-       we only need to track one waiting thread at a time.
-       Set to nullptr when no thread is waiting. */
-    Thread* waiting_thread;
+ 
+   /* ADDED: FIFO request queue (replaces single waiting_thread). */
+    DiskRequest* queue_head;
+    DiskRequest* queue_tail;
+ 
+    void enqueue_request(DiskRequest* req);
+    DiskRequest* dequeue_request();
  
 protected:
-    /* MODIFIED: Override wait_while_busy() to yield the CPU instead of 
-       busy-looping. The current thread blocks until the disk is ready. */
+ 
+    /*  yield CPU instead of busy-looping */
     virtual void wait_while_busy();
  
 public:
-    NonBlockingDisk(unsigned int _size);
-    /* Creates a NonBlockingDisk device with the given size connected to the 
-       MASTER slot of the primary ATA controller.
-       NOTE: Requires System::SCHEDULER to be initialized before disk I/O. */
  
-    /* Called by the scheduler (or any thread) to check if the disk is done
-       and wake up any waiting thread. Should be called frequently, e.g.,
-       each time a thread gets CPU time via pass_on_CPU(). */
+    NonBlockingDisk(unsigned int _size);
+    /* Constructor. Also registers self as IRQ 14 handler. */
+ 
+    /* BASE: poll-based wake-up called from pass_on_CPU().
+       This becomes a no-op since IRQ 14 drives wakeup. */
     void check_and_resume();
+ 
+    /* IRQ 14 bottom-half handler */
+    virtual void handle_interrupt(REGS* _regs);
 };
 
 #endif
