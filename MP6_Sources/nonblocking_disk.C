@@ -29,54 +29,83 @@
 /* CONSTRUCTOR */
 /*--------------------------------------------------------------------------*/
 
-NonBlockingDisk::NonBlockingDisk(unsigned int _size) 
-  : SimpleDisk(_size), waiting_thread(nullptr) {
-    /* Nothing extra to initialize beyond SimpleDisk and zeroing waiting_thread. */
+NonBlockingDisk::NonBlockingDisk(unsigned int _size)
+    : SimpleDisk(_size), queue_head(nullptr), queue_tail(nullptr)
+{
+    /* Register as IRQ 14 handler (primary IDE interrupt). */
+    InterruptHandler::register_handler(14, this);
     Console::puts("Constructed NonBlockingDisk.\n");
 }
+/*--------------------------------------------------------------------------*/
+/* Queue helpers added                                                      */
+/*--------------------------------------------------------------------------*/
  
+void NonBlockingDisk::enqueue_request(DiskRequest* req) {
+    req->next = nullptr;
+    if (queue_tail == nullptr) {
+        queue_head = req;
+        queue_tail = req;
+    } else {
+        queue_tail->next = req;
+        queue_tail = req;
+    }
+}
+ 
+DiskRequest* NonBlockingDisk::dequeue_request() {
+    if (queue_head == nullptr) return nullptr;
+    DiskRequest* req = queue_head;
+    queue_head = queue_head->next;
+    if (queue_head == nullptr) queue_tail = nullptr;
+    return req;
+}
+
 /*--------------------------------------------------------------------------*/
 /* MODIFIED: wait_while_busy -- the core change for this MP                 */
 /*--------------------------------------------------------------------------*/
  
 void NonBlockingDisk::wait_while_busy() {
-    /* Instead of busy-looping like SimpleDisk does:
-       while (is_busy()) { }    <-- WE DO NOT DO THIS
+    /* Enqueue current thread before yielding so any of
+       multiple waiting threads can be woken in order. */
+    DiskRequest req;
+    req.thread = Thread::CurrentThread();
+    enqueue_request(&req);
  
-       We store the current thread and yield the CPU.
-       The thread will be resumed later via check_and_resume()
-       once the disk signals it is ready (is_busy() returns false). */
+    /* Yield CPU -- we will be resumed by check_and_resume() (Option 2)
+       or handle_interrupt() (Option 3) once the disk is ready. */
+    System::SCHEDULER->yield();
  
-    if (is_busy()) {
-        /* -- BLOCK: record who is waiting and yield the CPU -- */
-        waiting_thread = Thread::CurrentThread();
- 
-        /* Yield to the scheduler; this thread will sleep until resumed. */
-        System::SCHEDULER->yield();
- 
-        /* When we return here, check_and_resume() has put us back on the 
-           ready queue AND we've been dispatched back. The disk should be
-           ready now. If (by some chance) it's still busy in the emulator, 
-           yield again — this loop is safe but rarely iterates more than once. */
-        while (is_busy()) {
-            waiting_thread = Thread::CurrentThread();
-            System::SCHEDULER->yield();
-        }
-    }
-    /* Disk is ready — return to caller (ide_polling) to proceed with I/O. */
+    /* Safety: in the emulator the disk may still briefly report busy. */
+    while (is_busy()) {}
 }
  
 /*--------------------------------------------------------------------------*/
-/* check_and_resume                                                          */
+/* check_and_resume                                                         */
 /* Called from pass_on_CPU() in kernel.C each time a thread yields.         */
 /* Checks if the disk is done and wakes up any waiting thread.              */
 /*--------------------------------------------------------------------------*/
  
 void NonBlockingDisk::check_and_resume() {
-    if (waiting_thread != nullptr && !is_busy()) {
-        /* Disk is ready and someone is waiting — wake them up. */
-        Thread* t = waiting_thread;
-        waiting_thread = nullptr;          /* clear before resume to avoid re-entry */
-        System::SCHEDULER->resume(t);      /* put the waiting thread back on ready queue */
+    /* IRQ 14 fires before we even get here, so queue is usually
+       empty by this point. Kept as a harmless fallback. */
+    if (queue_head != nullptr && !is_busy()) {
+        DiskRequest* req = dequeue_request();
+        if (req != nullptr) {
+            System::SCHEDULER->resume(req->thread);
+        }
     }
+}
+
+/*--------------------------------------------------------------------------*/
+/* IRQ 14 bottom-half handler                                               */
+/*--------------------------------------------------------------------------*/
+ 
+void NonBlockingDisk::handle_interrupt(REGS* _regs) {
+    /* Disk signals it is done. Wake the thread at the head of the queue. */
+    if (queue_head != nullptr) {
+        DiskRequest* req = dequeue_request();
+        if (req != nullptr) {
+            System::SCHEDULER->resume(req->thread);
+        }
+    }
+    /* EOI is sent automatically by InterruptHandler::dispatch_interrupt(). */
 }
