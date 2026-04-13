@@ -19,7 +19,7 @@
 
 /* -- COMMENT/UNCOMMENT THE FOLLOWING LINE TO EXCLUDE/INCLUDE SCHEDULER CODE */
 
-//#define _USES_SCHEDULER_
+#define _USES_SCHEDULER_
 /* This macro is defined when we want to force the code below to use
    a scheduler.
    Otherwise, no scheduler is used, and the threads pass control to each
@@ -52,6 +52,7 @@
 
 #include "simple_disk.H"    /* DISK DEVICE */
 							/* YOU MAY NEED TO INCLUDE nonblocking_disk.H */
+#include "nonblocking_disk.H"
 
 #include "system.H"         /* SYSTEM COMPONENTS: SCHEDULER, MEMORY, DISK */
 
@@ -109,6 +110,11 @@ void pass_on_CPU(Thread* _to_thread)
 	/* We use a scheduler. Instead of dispatching to the next thread,
 	   we pre-empt the current thread by putting it onto the ready
 	   queue and yielding the CPU. */
+	/* Before yielding, check if the disk is done and
+	   wake up any thread that was waiting on it.
+	   We cast System::DISK to NonBlockingDisk* to access check_and_resume(). */
+	NonBlockingDisk* nbd = (NonBlockingDisk*)(System::DISK);
+	nbd->check_and_resume();
 
 	System::SCHEDULER->resume(Thread::CurrentThread());
 	System::SCHEDULER->yield();
@@ -267,14 +273,15 @@ int main()
 	SimpleTimer timer(100); /* timer ticks every 10ms. */
 	InterruptHandler::register_handler(0, &timer);
 	/* The Timer is implemented as an interrupt handler. */
+	// // The NonBlockingDisk uses a scheduler.
+	System::DISK = new NonBlockingDisk(System::DISK_SIZE);
 
 	/* -- DISK DEVICE -- */
 
-	System::DISK = new SimpleDisk(System::DISK_SIZE); // Replace this with commented code below when you are ready!
+	//System::DISK = new SimpleDisk(System::DISK_SIZE); // Replace this with commented code below when you are ready!
 
-	// #define _USES_SCHEDULER_
-	// // The NonBlockingDisk uses a scheduler.
-	// System::DISK = new NonBlockingDisk(System::DISK_SIZE);
+	#define _USES_SCHEDULER_
+	
 
 	/* -- SCHEDULER -- IF YOU HAVE ONE -- */
 
